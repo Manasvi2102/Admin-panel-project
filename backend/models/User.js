@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 const userSchema = mongoose.Schema(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true, lowercase: true },
     password: { type: String, required: true, select: false },
     phone: { type: String },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
@@ -15,6 +15,18 @@ const userSchema = mongoose.Schema(
       state: { type: String },
       zipCode: { type: String },
       country: { type: String },
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    otp: {
+      type: String,
+      select: false,
+    },
+    otpExpires: {
+      type: Date,
+      select: false,
     },
   },
   { timestamps: true }

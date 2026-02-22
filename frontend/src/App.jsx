@@ -6,11 +6,13 @@ import { WishlistProvider } from './context/WishlistContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import ScrollToTop from './components/ScrollToTop';
 
 // Pages
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import VerifyOtp from './pages/VerifyOtp';
 import Books from './pages/Books';
 import BookDetails from './pages/BookDetails';
 import Cart from './pages/Cart';
@@ -18,6 +20,8 @@ import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import OrderDetails from './pages/OrderDetails';
 import Profile from './pages/Profile';
+import Featured from './pages/Featured';
+import About from './pages/About';
 import NotFound from './pages/NotFound';
 
 // Admin Pages
@@ -32,15 +36,18 @@ function AppContent() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Navbar />
+      <ScrollToTop />
+      {!isAdminRoute && <Navbar />}
       <main className="flex-grow">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/books" element={<Books />} />
+          <Route path="/featured" element={<Featured />} />
+          <Route path="/about" element={<About />} />
           <Route path="/books/:id" element={<BookDetails />} />
-          
+
           <Route
             path="/cart"
             element={
@@ -81,7 +88,7 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
-          
+
           {/* Admin Routes */}
           <Route
             path="/admin/dashboard"
@@ -115,7 +122,8 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
-          
+
+          <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
@@ -130,7 +138,7 @@ function App() {
     <AuthProvider>
       <CartProvider>
         <WishlistProvider>
-          <Router>
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AppContent />
           </Router>
         </WishlistProvider>

@@ -78,8 +78,8 @@ const Cart = () => {
           <div className="lg:col-span-2 space-y-4">
             {cart.items.map((item) => {
               const book = item.book;
-              const price = book.discount > 0 
-                ? book.price * (1 - book.discount / 100) 
+              const price = book.discount > 0
+                ? book.price * (1 - book.discount / 100)
                 : book.price;
               const itemTotal = price * item.quantity;
 
@@ -140,7 +140,7 @@ const Cart = () => {
                         </div>
                         <div className="flex items-center space-x-4">
                           <span className="text-lg font-bold">
-                            ${itemTotal.toFixed(2)}
+                            ₹{itemTotal.toFixed(2)}
                           </span>
                           <button
                             onClick={() => handleRemoveItem(item._id)}
@@ -164,26 +164,26 @@ const Cart = () => {
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>₹{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping</span>
-                  <span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
+                  <span>{shipping === 0 ? 'Free' : `₹${shipping.toFixed(2)}`}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tax</span>
-                  <span>${tax.toFixed(2)}</span>
+                  <span>₹{tax.toFixed(2)}</span>
                 </div>
                 {subtotal < 50 && (
                   <p className="text-sm text-primary-600">
-                    Add ${(50 - subtotal).toFixed(2)} more for free shipping!
+                    Add ₹{(50 - subtotal).toFixed(2)} more for free shipping!
                   </p>
                 )}
               </div>
               <div className="border-t pt-4 mb-4">
                 <div className="flex justify-between text-xl font-bold">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>₹{total.toFixed(2)}</span>
                 </div>
               </div>
               <Link

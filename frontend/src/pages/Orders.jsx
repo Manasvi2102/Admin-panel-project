@@ -116,7 +116,7 @@ const Orders = () => {
                       <span className="capitalize">{order.orderStatus}</span>
                     </span>
                     <span className="text-xl font-bold text-primary-600">
-                      ${order.total.toFixed(2)}
+                      ₹{order.total.toFixed(2)}
                     </span>
                   </div>
                 </div>

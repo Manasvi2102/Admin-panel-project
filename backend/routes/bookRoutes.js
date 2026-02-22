@@ -109,11 +109,11 @@ router.get(
     const books = await Book.countDocuments({ isActive: true });
 
     // Total users
-    const User = (await import('../models/User.js')).default;
+    const { User } = await import('../models/User.js');
     const users = await User.countDocuments({ role: 'user', isActive: true });
 
     // Total orders
-    const Order = (await import('../models/Order.js')).default;
+    const { Order } = await import('../models/Order.js');
     const orders = await Order.countDocuments();
 
     res.json({

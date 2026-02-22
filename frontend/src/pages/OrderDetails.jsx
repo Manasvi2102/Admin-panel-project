@@ -143,19 +143,19 @@ const OrderDetails = () => {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>${order.subtotal.toFixed(2)}</span>
+                <span>₹{order.subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Shipping</span>
-                <span>{order.shippingCost === 0 ? 'Free' : `$${order.shippingCost.toFixed(2)}`}</span>
+                <span>{order.shippingCost === 0 ? 'Free' : `₹${order.shippingCost.toFixed(2)}`}</span>
               </div>
               <div className="flex justify-between">
                 <span>Tax</span>
-                <span>${order.tax.toFixed(2)}</span>
+                <span>₹{order.tax.toFixed(2)}</span>
               </div>
               <div className="border-t pt-2 flex justify-between text-xl font-bold">
                 <span>Total</span>
-                <span>${order.total.toFixed(2)}</span>
+                <span>₹{order.total.toFixed(2)}</span>
               </div>
             </div>
           </div>

@@ -14,27 +14,31 @@ router.get(
   asyncHandler(async (req, res) => {
     const { page = 1, limit = 12, sort = 'name' } = req.query;
 
-    const options = {
-      page: parseInt(page, 10),
-      limit: parseInt(limit, 10),
-      sort: sort,
-      populate: {
-        path: 'books',
-        select: 'title ratings',
-      },
-    };
+    const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const authors = await Author.paginate({}, options);
+    // Find authors and populate books to calculate stats
+    const authors = await Author.find({})
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate({
+        path: 'books',
+        model: 'Book',
+        select: 'title ratings'
+      });
+
+    const totalDocs = await Author.countDocuments({});
 
     // Calculate average rating and book count for each author
-    const authorsWithStats = authors.docs.map(author => {
+    const authorsWithStats = authors.map(author => {
+      const authorObj = author.toObject();
       const bookCount = author.books?.length || 0;
       const averageRating = bookCount > 0
         ? author.books.reduce((sum, book) => sum + (book.ratings?.average || 0), 0) / bookCount
         : 0;
 
       return {
-        ...author.toObject(),
+        ...authorObj,
         bookCount,
         averageRating: parseFloat(averageRating.toFixed(1)),
       };
@@ -44,9 +48,9 @@ router.get(
       success: true,
       data: authorsWithStats,
       pagination: {
-        page: authors.page,
-        pages: authors.totalPages,
-        total: authors.totalDocs,
+        page: parseInt(page),
+        pages: Math.ceil(totalDocs / parseInt(limit)),
+        total: totalDocs,
       },
     });
   })

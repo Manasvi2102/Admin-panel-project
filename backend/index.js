@@ -33,21 +33,16 @@ app.set('trust proxy', 1);
 
 // Body Parser & CORS
 app.use(express.json({ limit: '10kb' })); // Body limit is 10kb
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://admin-panel-project-azure.vercel.app'
-];
 app.use(cors({
-  origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
-    }
-    return callback(null, true);
-  },
-  credentials: true
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://admin-panel-project-azure.vercel.app',
+    'https://admin-panel-project-azure.vercel.app/'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
 // Security Middleware

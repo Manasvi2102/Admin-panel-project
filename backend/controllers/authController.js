@@ -281,11 +281,13 @@ export const loginUser = async (req, res) => {
     const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
+        console.log(`❌ Login failed: User not found [${email}]`);
         return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+        console.log(`❌ Login failed: Password mismatch [${email}]`);
         return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
@@ -305,28 +307,33 @@ export const loginUser = async (req, res) => {
     console.log(`🔢 OTP CODE: ${otp}`);
     console.log(`--------------------------------------------\n`);
 
-    const { sent } = await trySendEmail({
-        email: user.email,
-        subject: 'BookNest – Login Verification OTP',
-        message: `Your login verification code is: ${otp}. It expires in 10 minutes.`,
-        html: `
-      <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;border-radius:12px;border:1px solid #e2e8f0">
-        <h2 style="color:#4f46e5">BookNest Login</h2>
-        <p>Hello <strong>${user.name}</strong>,</p>
-        <p>Use the OTP below to complete your login:</p>
-        <div style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#4f46e5;text-align:center;padding:16px 0">${otp}</div>
-        <p style="color:#64748b;font-size:13px">This code expires in <strong>10 minutes</strong>.</p>
-      </div>
-    `,
-    });
+    try {
+        const { sent } = await trySendEmail({
+            email: user.email,
+            subject: 'BookNest – Login Verification OTP',
+            message: `Your login verification code is: ${otp}. It expires in 10 minutes.`,
+            html: `
+          <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;border-radius:12px;border:1px solid #e2e8f0">
+            <h2 style="color:#4f46e5">BookNest Login</h2>
+            <p>Hello <strong>${user.name}</strong>,</p>
+            <p>Use the OTP below to complete your login:</p>
+            <div style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#4f46e5;text-align:center;padding:16px 0">${otp}</div>
+            <p style="color:#64748b;font-size:13px">This code expires in <strong>10 minutes</strong>.</p>
+          </div>
+        `,
+        });
 
-    return res.status(200).json({
-        success: true,
-        message: sent ? 'OTP sent to your email for login verification.' : 'Login successful, but OTP email failed. Please check logs.',
-        emailSent: sent,
-        requireOtp: true,
-        email: user.email
-    });
+        return res.status(200).json({
+            success: true,
+            message: sent ? 'OTP sent to your email for login verification.' : 'Login successful, but OTP email failed. Please check logs.',
+            emailSent: sent,
+            requireOtp: true,
+            email: user.email
+        });
+    } catch (error) {
+        console.error('❌ Login Error during email/response:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error during login' });
+    }
 };
 
 // ─────────────────────────────────────────────

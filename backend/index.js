@@ -30,7 +30,10 @@ const app = express();
 
 // Body Parser & CORS
 app.use(express.json({ limit: '10kb' })); // Body limit is 10kb
-app.use(cors());
+app.use(cors({
+  origin: process.env.CLIENT_URL || '*',
+  credentials: true
+}));
 
 // Security Middleware
 app.use(helmet()); // Set security HTTP headers

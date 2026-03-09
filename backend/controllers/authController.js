@@ -308,7 +308,7 @@ export const loginUser = async (req, res) => {
     console.log(`--------------------------------------------\n`);
 
     try {
-        const { sent } = await trySendEmail({
+        const { sent, error } = await trySendEmail({
             email: user.email,
             subject: 'BookNest – Login Verification OTP',
             message: `Your login verification code is: ${otp}. It expires in 10 minutes.`,
@@ -323,10 +323,16 @@ export const loginUser = async (req, res) => {
         `,
         });
 
+        if (!sent) {
+            return res.status(500).json({
+                success: false,
+                message: `Failed to send OTP email. Please try again later. Error: ${error || 'Unknown error'}`,
+            });
+        }
+
         return res.status(200).json({
             success: true,
-            message: sent ? 'OTP sent to your email for login verification.' : 'Login successful, but OTP email failed. Please check logs.',
-            emailSent: sent,
+            message: 'OTP sent to your email for login verification.',
             requireOtp: true,
             email: user.email
         });

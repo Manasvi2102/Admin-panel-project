@@ -91,6 +91,14 @@ app.use((req, res) => {
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Deployment Environment: ${process.env.NODE_ENV || 'production'}`);
+
+  // Check for email environment variables
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn('⚠️ WARNING: EMAIL_USER or EMAIL_PASS environment variables are missing!');
+    console.warn('📧 Emails (OTPs) will NOT be sent.');
+  } else {
+    console.log('✅ Email configuration detected.');
+  }
 });
 
 // Handle unhandled promise rejections

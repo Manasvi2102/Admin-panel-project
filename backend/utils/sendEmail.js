@@ -1,18 +1,12 @@
 import nodemailer from 'nodemailer';
 
 const sendEmail = async (options) => {
-    // Create transporter using Gmail SMTP
+    // Create transporter using Gmail service
     const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true, // SSL
+        service: 'gmail',
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS,
-        },
-        tls: {
-            // Do not fail on invalid certs
-            rejectUnauthorized: false
         }
     });
 

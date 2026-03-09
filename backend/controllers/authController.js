@@ -68,10 +68,11 @@ export const registerUser = async (req, res) => {
             userExists.otpExpires = otpExpires;
             await userExists.save();
 
-            console.log(`\n--------------------------------------------`);
-            console.log(`🔐 RE-REGISTER (UNVERIFIED) OTP FOR: ${userExists.email}`);
+            console.log(`\n============================================`);
+            console.log(`🕒 EVENT: OTP GENERATED [${new Date().toLocaleTimeString()}]`);
+            console.log(`🔐 RE-REGISTER (UNVERIFIED): ${userExists.email}`);
             console.log(`🔢 OTP CODE: ${otp}`);
-            console.log(`--------------------------------------------\n`);
+            console.log(`============================================\n`);
 
             // Background send - don't await to keep response fast
             trySendEmail({
@@ -121,10 +122,11 @@ export const registerUser = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Invalid user data' });
     }
 
-    console.log(`\n--------------------------------------------`);
-    console.log(`🔐 REGISTRATION OTP FOR: ${email}`);
+    console.log(`\n============================================`);
+    console.log(`🕒 EVENT: NEW REGISTRATION [${new Date().toLocaleTimeString()}]`);
+    console.log(`🔐 EMAIL: ${email}`);
     console.log(`🔢 OTP CODE: ${otp}`);
-    console.log(`--------------------------------------------\n`);
+    console.log(`============================================\n`);
 
     // Background send
     trySendEmail({
@@ -231,10 +233,11 @@ export const resendOTP = async (req, res) => {
     user.otpExpires = otpExpires;
     await user.save();
 
-    console.log(`\n--------------------------------------------`);
-    console.log(`🔐 RESEND OTP FOR: ${email}`);
+    console.log(`\n============================================`);
+    console.log(`🕒 EVENT: OTP RESENT [${new Date().toLocaleTimeString()}]`);
+    console.log(`🔐 EMAIL: ${email}`);
     console.log(`🔢 OTP CODE: ${otp}`);
-    console.log(`--------------------------------------------\n`);
+    console.log(`============================================\n`);
 
     // Background send
     trySendEmail({
@@ -301,10 +304,11 @@ export const loginUser = async (req, res) => {
     user.isVerified = false;
     await user.save();
 
-    console.log(`\n--------------------------------------------`);
-    console.log(`🔐 LOGIN OTP FOR: ${email}`);
+    console.log(`\n============================================`);
+    console.log(`🕒 EVENT: LOGIN ATTEMPT [${new Date().toLocaleTimeString()}]`);
+    console.log(`🔐 EMAIL: ${email}`);
     console.log(`🔢 OTP CODE: ${otp}`);
-    console.log(`--------------------------------------------\n`);
+    console.log(`============================================\n`);
 
     // Background send
     try {

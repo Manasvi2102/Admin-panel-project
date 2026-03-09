@@ -31,7 +31,6 @@ const trySendEmail = async (options) => {
 // @desc    Register a new user & send OTP
 // @route   POST /api/auth/register
 // @access  Public
-// Required fields: name, email, password
 // ─────────────────────────────────────────────
 export const registerUser = async (req, res) => {
     console.log('📬 NEW REGISTRATION REQUEST RECEIVED:', {
@@ -69,7 +68,6 @@ export const registerUser = async (req, res) => {
             userExists.otpExpires = otpExpires;
             await userExists.save();
 
-
             console.log(`\n--------------------------------------------`);
             console.log(`🔐 RE-REGISTER (UNVERIFIED) OTP FOR: ${userExists.email}`);
             console.log(`🔢 OTP CODE: ${otp}`);
@@ -105,7 +103,7 @@ export const registerUser = async (req, res) => {
             message: 'An account with this email already exists. Please login.',
         });
     }
-}
+
     // ── Create new user ──
     const { otp, hashedOTP, otpExpires } = await generateOTP();
 
@@ -126,8 +124,6 @@ export const registerUser = async (req, res) => {
     console.log(`🔐 REGISTRATION OTP FOR: ${email}`);
     console.log(`🔢 OTP CODE: ${otp}`);
     console.log(`--------------------------------------------\n`);
-
-
 
     const { sent } = await trySendEmail({
         email: user.email,
@@ -151,106 +147,98 @@ export const registerUser = async (req, res) => {
             : 'Registration successful! However, the verification email could not be sent. Please check the server email configuration.',
         emailSent: sent,
     });
+};
 
+// ─────────────────────────────────────────────
+// @desc    Verify OTP after registration
+// ─────────────────────────────────────────────
+export const verifyOTP = async (req, res) => {
+    const { otp } = req.body;
 
-    // ─────────────────────────────────────────────
-    // @desc    Verify OTP after registration
-    // @route   POST /api/auth/verify-otp
-    // @access  Public
-    // Required fields: email, otp
-    // ─────────────────────────────────────────────
-    export const verifyOTP = async (req, res) => {
-        const { otp } = req.body;
+    if (!req.body.email || !otp) {
+        return res.status(400).json({ success: false, message: 'Please provide email and OTP' });
+    }
 
-        if (!req.body.email || !otp) {
-            return res.status(400).json({ success: false, message: 'Please provide email and OTP' });
-        }
+    const email = req.body.email.toLowerCase().trim();
+    const user = await User.findOne({ email }).select('+otp +otpExpires');
 
-        const email = req.body.email.toLowerCase().trim();
-        const user = await User.findOne({ email }).select('+otp +otpExpires');
+    if (!user) {
+        return res.status(404).json({ success: false, message: 'No account found with this email' });
+    }
 
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'No account found with this email' });
-        }
+    if (user.isVerified) {
+        return res.status(400).json({ success: false, message: 'Account is already verified. Please login.' });
+    }
 
-        if (user.isVerified) {
-            return res.status(400).json({ success: false, message: 'Account is already verified. Please login.' });
-        }
+    if (!user.otp || !user.otpExpires) {
+        return res.status(400).json({ success: false, message: 'No OTP found. Please request a new one.' });
+    }
 
-        if (!user.otp || !user.otpExpires) {
-            return res.status(400).json({ success: false, message: 'No OTP found. Please request a new one.' });
-        }
+    if (user.otpExpires < Date.now()) {
+        return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
+    }
 
-        if (user.otpExpires < Date.now()) {
-            return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
-        }
+    const isMatch = await bcrypt.compare(otp, user.otp);
+    if (!isMatch) {
+        return res.status(400).json({ success: false, message: 'Invalid OTP. Please try again.' });
+    }
 
-        const isMatch = await bcrypt.compare(otp, user.otp);
-        if (!isMatch) {
-            return res.status(400).json({ success: false, message: 'Invalid OTP. Please try again.' });
-        }
+    // Mark as verified & clear OTP
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
 
-        // Mark as verified & clear OTP
-        user.isVerified = true;
-        user.otp = undefined;
-        user.otpExpires = undefined;
-        await user.save();
+    const token = generateToken(user._id);
+    console.log('✅ Email verified:', email);
 
-        const token = generateToken(user._id);
-        console.log('✅ Email verified:', email);
-
-        return res.status(200).json({
-            success: true,
-            message: 'Email verified successfully! You are now logged in.',
-            data: {
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                token,
-            },
-        });
-    };
-
-    // ─────────────────────────────────────────────
-    // @desc    Resend OTP
-    // @route   POST /api/auth/resend-otp
-    // @access  Public
-    // Required fields: email
-    // ─────────────────────────────────────────────
-    export const resendOTP = async (req, res) => {
-        if (!req.body.email) {
-            return res.status(400).json({ success: false, message: 'Please provide your email' });
-        }
-
-        const email = req.body.email.toLowerCase().trim();
-        const user = await User.findOne({ email });
-
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'No account found with this email' });
-        }
-
-        if (user.isVerified) {
-            return res.status(400).json({ success: false, message: 'Account is already verified. Please login.' });
-        }
-
-        const { otp, hashedOTP, otpExpires } = await generateOTP();
-        user.otp = hashedOTP;
-        user.otpExpires = otpExpires;
-        await user.save();
-
-        console.log(`\n--------------------------------------------`);
-        console.log(`🔐 RESEND OTP FOR: ${email}`);
-        console.log(`🔢 OTP CODE: ${otp}`);
-        console.log(`--------------------------------------------\n`);
-
-
-
-        const { sent } = await trySendEmail({
+    return res.status(200).json({
+        success: true,
+        message: 'Email verified successfully! You are now logged in.',
+        data: {
+            _id: user._id,
+            name: user.name,
             email: user.email,
-            subject: 'BookNest – Resend Verification OTP',
-            message: `Your new verification code is: ${otp}. It expires in 10 minutes.`,
-            html: `
+            role: user.role,
+            token,
+        },
+    });
+};
+
+// ─────────────────────────────────────────────
+// @desc    Resend OTP
+// ─────────────────────────────────────────────
+export const resendOTP = async (req, res) => {
+    if (!req.body.email) {
+        return res.status(400).json({ success: false, message: 'Please provide your email' });
+    }
+
+    const email = req.body.email.toLowerCase().trim();
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        return res.status(404).json({ success: false, message: 'No account found with this email' });
+    }
+
+    if (user.isVerified) {
+        return res.status(400).json({ success: false, message: 'Account is already verified. Please login.' });
+    }
+
+    const { otp, hashedOTP, otpExpires } = await generateOTP();
+    user.otp = hashedOTP;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    console.log(`\n--------------------------------------------`);
+    console.log(`🔐 RESEND OTP FOR: ${email}`);
+    console.log(`🔢 OTP CODE: ${otp}`);
+    console.log(`--------------------------------------------\n`);
+
+    const { sent } = await trySendEmail({
+        email: user.email,
+        subject: 'BookNest – Resend Verification OTP',
+        message: `Your new verification code is: ${otp}. It expires in 10 minutes.`,
+        html: `
       <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;border-radius:12px;border:1px solid #e2e8f0">
         <h2 style="color:#4f46e5">BookNest</h2>
         <p>Hello <strong>${user.name}</strong>,</p>
@@ -259,76 +247,68 @@ export const registerUser = async (req, res) => {
         <p style="color:#64748b;font-size:13px">This code expires in <strong>10 minutes</strong>.</p>
       </div>
     `,
-        });
+    });
 
-        return res.status(200).json({
-            success: true,
-            message: sent
-                ? 'OTP resent successfully. Please check your email.'
-                : 'OTP generated but email could not be sent. Please check the server email configuration.',
-            emailSent: sent,
-        });
-    };
+    return res.status(200).json({
+        success: true,
+        message: sent
+            ? 'OTP resent successfully. Please check your email.'
+            : 'OTP generated but email could not be sent. Please check the server email configuration.',
+        emailSent: sent,
+    });
+};
 
-    // ─────────────────────────────────────────────
-    // @desc    Login with email & password
-    // @route   POST /api/auth/login
-    // @access  Public
-    // Required fields: email, password
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // @desc    Login with email & password (leads to OTP)
-    // ─────────────────────────────────────────────
-    export const loginUser = async (req, res) => {
-        console.log('📬 NEW LOGIN REQUEST RECEIVED:', {
-            email: req.body.email,
-            hasPassword: !!req.body.password
-        });
+// ─────────────────────────────────────────────
+// @desc    Login with email & password (leads to OTP)
+// ─────────────────────────────────────────────
+export const loginUser = async (req, res) => {
+    console.log('📬 NEW LOGIN REQUEST RECEIVED:', {
+        email: req.body.email,
+        hasPassword: !!req.body.password
+    });
 
-        const { password } = req.body;
+    const { password } = req.body;
 
-        if (!req.body.email || !password) {
-            return res.status(400).json({ success: false, message: 'Please provide email and password' });
-        }
+    if (!req.body.email || !password) {
+        return res.status(400).json({ success: false, message: 'Please provide email and password' });
+    }
 
-        const email = req.body.email.toLowerCase().trim();
-        console.log('Login attempt:', email);
+    const email = req.body.email.toLowerCase().trim();
+    const user = await User.findOne({ email }).select('+password');
 
-        const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+        console.log(`❌ Login failed: User not found [${email}]`);
+        return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
 
-        if (!user) {
-            console.log(`❌ Login failed: User not found [${email}]`);
-            return res.status(401).json({ success: false, message: 'Invalid email or password' });
-        }
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+        console.log(`❌ Login failed: Password mismatch [${email}]`);
+        return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
 
-        const isMatch = await user.comparePassword(password);
-        if (!isMatch) {
-            console.log(`❌ Login failed: Password mismatch [${email}]`);
-            return res.status(401).json({ success: false, message: 'Invalid email or password' });
-        }
+    if (!user.isActive) {
+        return res.status(401).json({ success: false, message: 'Your account has been deactivated. Contact support.' });
+    }
 
-        if (!user.isActive) {
-            return res.status(401).json({ success: false, message: 'Your account has been deactivated. Contact support.' });
-        }
+    // Always send OTP on login for better security
+    const { otp, hashedOTP, otpExpires } = await generateOTP();
+    user.otp = hashedOTP;
+    user.otpExpires = otpExpires;
+    user.isVerified = false;
+    await user.save();
 
-        // Always send OTP on login for better security (as requested)
-        const { otp, hashedOTP, otpExpires } = await generateOTP();
-        user.otp = hashedOTP;
-        user.otpExpires = otpExpires;
-        user.isVerified = false; // Temporarily unverify for this login session if you want mandatory OTP
-        await user.save();
+    console.log(`\n--------------------------------------------`);
+    console.log(`🔐 LOGIN OTP FOR: ${email}`);
+    console.log(`🔢 OTP CODE: ${otp}`);
+    console.log(`--------------------------------------------\n`);
 
-        console.log(`\n--------------------------------------------`);
-        console.log(`🔐 LOGIN OTP FOR: ${email}`);
-        console.log(`🔢 OTP CODE: ${otp}`);
-        console.log(`--------------------------------------------\n`);
-
-        try {
-            const { sent, error } = await trySendEmail({
-                email: user.email,
-                subject: 'BookNest – Login Verification OTP',
-                message: `Your login verification code is: ${otp}. It expires in 10 minutes.`,
-                html: `
+    try {
+        const { sent, error } = await trySendEmail({
+            email: user.email,
+            subject: 'BookNest – Login Verification OTP',
+            message: `Your login verification code is: ${otp}. It expires in 10 minutes.`,
+            html: `
           <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;border-radius:12px;border:1px solid #e2e8f0">
             <h2 style="color:#4f46e5">BookNest Login</h2>
             <p>Hello <strong>${user.name}</strong>,</p>
@@ -337,94 +317,87 @@ export const registerUser = async (req, res) => {
             <p style="color:#64748b;font-size:13px">This code expires in <strong>10 minutes</strong>.</p>
           </div>
         `,
+        });
+
+        if (!sent) {
+            return res.status(500).json({
+                success: false,
+                message: `Failed to send OTP email. Please try again later. Error: ${error || 'Unknown error'}`,
             });
-
-            if (!sent) {
-                return res.status(500).json({
-                    success: false,
-                    message: `Failed to send OTP email. Please try again later. Error: ${error || 'Unknown error'}`,
-                });
-            }
-
-            return res.status(200).json({
-                success: true,
-                message: 'OTP sent to your email for login verification.',
-                requireOtp: true,
-                email: user.email
-            });
-        } catch (error) {
-            console.error('❌ Login Error during email/response:', error);
-            return res.status(500).json({ success: false, message: 'Internal server error during login' });
-        }
-    };
-
-    // ─────────────────────────────────────────────
-    // @desc    Get current logged-in user
-    // @route   GET /api/auth/me
-    // @access  Private (requires JWT)
-    // ─────────────────────────────────────────────
-    export const getMe = async (req, res) => {
-        const user = await User.findById(req.user._id);
-
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
         }
 
-        return res.status(200).json({ success: true, data: user });
-    };
-
-    // ─────────────────────────────────────────────
-    // @desc    Update profile (name, email, phone, address)
-    // @route   PUT /api/auth/updateprofile
-    // @access  Private (requires JWT)
-    // ─────────────────────────────────────────────
-    export const updateProfile = async (req, res) => {
-        const { name, email, phone, address } = req.body;
-
-        const user = await User.findById(req.user._id);
-
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
-
-        user.name = name || user.name;
-        user.email = email ? email.toLowerCase().trim() : user.email;
-        user.phone = phone || user.phone;
-
-        if (address) {
-            user.address = { ...user.address, ...address };
-        }
-
-        const updatedUser = await user.save();
-        return res.status(200).json({ success: true, data: updatedUser });
-    };
-
-    // ─────────────────────────────────────────────
-    // @desc    Update password
-    // @route   PUT /api/auth/updatepassword
-    // @access  Private (requires JWT)
-    // Required fields: currentPassword, newPassword
-    // ─────────────────────────────────────────────
-    export const updatePassword = async (req, res) => {
-        const { currentPassword, newPassword } = req.body;
-
-        if (!currentPassword || !newPassword) {
-            return res.status(400).json({ success: false, message: 'Please provide current and new password' });
-        }
-
-        const user = await User.findById(req.user._id).select('+password');
-
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
-
-        const isMatch = await user.comparePassword(currentPassword);
-        if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Current password is incorrect' });
-        }
-
-        user.password = newPassword;
-        await user.save();
-
-        return res.status(200).json({ success: true, message: 'Password updated successfully' });
+        return res.status(200).json({
+            success: true,
+            message: 'OTP sent to your email for login verification.',
+            requireOtp: true,
+            email: user.email
+        });
+    } catch (err) {
+        console.error('❌ Login Error during email/response:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error during login' });
     }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Get current logged-in user
+// ─────────────────────────────────────────────
+export const getMe = async (req, res) => {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    return res.status(200).json({ success: true, data: user });
+};
+
+// ─────────────────────────────────────────────
+// @desc    Update profile
+// ─────────────────────────────────────────────
+export const updateProfile = async (req, res) => {
+    const { name, email, phone, address } = req.body;
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.name = name || user.name;
+    user.email = email ? email.toLowerCase().trim() : user.email;
+    user.phone = phone || user.phone;
+
+    if (address) {
+        user.address = { ...user.address, ...address };
+    }
+
+    const updatedUser = await user.save();
+    return res.status(200).json({ success: true, data: updatedUser });
+};
+
+// ─────────────────────────────────────────────
+// @desc    Update password
+// ─────────────────────────────────────────────
+export const updatePassword = async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ success: false, message: 'Please provide current and new password' });
+    }
+
+    const user = await User.findById(req.user._id).select('+password');
+
+    if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+        return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    return res.status(200).json({ success: true, message: 'Password updated successfully' });
+};

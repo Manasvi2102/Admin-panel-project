@@ -88,7 +88,7 @@ app.use((req, res) => {
 });
 
 // Start Server
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Deployment Environment: ${process.env.NODE_ENV || 'production'}`);
 

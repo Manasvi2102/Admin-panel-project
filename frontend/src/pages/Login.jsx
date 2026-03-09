@@ -21,20 +21,19 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // Backend: POST /api/auth/login → { success, message, data: { _id, name, email, role, token } }
-      await login(formData.email, formData.password);
-      toast.success('Welcome back! Login successful.');
-      navigate('/');
-    } catch (error) {
-      const message = error.response?.data?.message || '';
+      // Backend: POST /api/auth/login → { success, message, requireOtp: true, email }
+      const res = await login(formData.email, formData.password);
 
-      // If user registered but not verified → redirect to verify-otp
-      if (message.toLowerCase().includes('verify your email')) {
-        toast.error('Please verify your email first.');
+      if (res?.requireOtp) {
+        toast.success('Login OTP sent to your email!');
         navigate('/verify-otp', { state: { email: formData.email.toLowerCase().trim() } });
       } else {
-        toast.error(message || 'Login failed. Please check your credentials.');
+        toast.success('Welcome back! Login successful.');
+        navigate('/');
       }
+    } catch (error) {
+      const message = error.response?.data?.message || error.message || 'Login failed';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

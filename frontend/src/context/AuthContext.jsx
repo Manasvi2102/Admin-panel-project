@@ -57,25 +57,27 @@ export const AuthProvider = ({ children }) => {
       password,
     });
 
-    // Backend always returns data inside res.data.data
-    const responseData = res.data.data;
-
-    if (!responseData || !responseData.token) {
-      throw new Error('Invalid login response from server');
+    // If backend says OTP is required (new flow)
+    if (res.data.requireOtp) {
+      return { requireOtp: true, email: res.data.email };
     }
 
-    const userData = {
-      _id: responseData._id,
-      name: responseData.name,
-      email: responseData.email,
-      role: responseData.role,
-    };
+    // Fallback/Legacy flow
+    const responseData = res.data.data;
+    if (responseData && responseData.token) {
+      const userData = {
+        _id: responseData._id,
+        name: responseData.name,
+        email: responseData.email,
+        role: responseData.role,
+      };
+      localStorage.setItem('token', responseData.token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      return userData;
+    }
 
-    localStorage.setItem('token', responseData.token);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
-
-    return userData;
+    return res.data;
   };
 
   // ── REGISTER: name + email + password → no token returned, OTP sent ──

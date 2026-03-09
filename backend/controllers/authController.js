@@ -265,6 +265,9 @@ export const resendOTP = async (req, res) => {
 // @access  Public
 // Required fields: email, password
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// @desc    Login with email & password (leads to OTP)
+// ─────────────────────────────────────────────
 export const loginUser = async (req, res) => {
     const { password } = req.body;
 
@@ -278,42 +281,51 @@ export const loginUser = async (req, res) => {
     const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
-        console.log('Login failed: user not found –', email);
         return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-        console.log('Login failed: wrong password –', email);
         return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
-    if (!user.isVerified) {
-        console.log('Login failed: not verified –', email);
-        return res.status(401).json({
-            success: false,
-            message: 'Please verify your email first. Check your inbox for the OTP.',
-        });
-    }
-
     if (!user.isActive) {
-        console.log('Login failed: account inactive –', email);
         return res.status(401).json({ success: false, message: 'Your account has been deactivated. Contact support.' });
     }
 
-    const token = generateToken(user._id);
-    console.log('✅ Login successful –', email);
+    // Always send OTP on login for better security (as requested)
+    const { otp, hashedOTP, otpExpires } = await generateOTP();
+    user.otp = hashedOTP;
+    user.otpExpires = otpExpires;
+    user.isVerified = false; // Temporarily unverify for this login session if you want mandatory OTP
+    await user.save();
+
+    console.log(`\n--------------------------------------------`);
+    console.log(`🔐 LOGIN OTP FOR: ${email}`);
+    console.log(`🔢 OTP CODE: ${otp}`);
+    console.log(`--------------------------------------------\n`);
+
+    const { sent } = await trySendEmail({
+        email: user.email,
+        subject: 'BookNest – Login Verification OTP',
+        message: `Your login verification code is: ${otp}. It expires in 10 minutes.`,
+        html: `
+      <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;border-radius:12px;border:1px solid #e2e8f0">
+        <h2 style="color:#4f46e5">BookNest Login</h2>
+        <p>Hello <strong>${user.name}</strong>,</p>
+        <p>Use the OTP below to complete your login:</p>
+        <div style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#4f46e5;text-align:center;padding:16px 0">${otp}</div>
+        <p style="color:#64748b;font-size:13px">This code expires in <strong>10 minutes</strong>.</p>
+      </div>
+    `,
+    });
 
     return res.status(200).json({
         success: true,
-        message: 'Login successful',
-        data: {
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            token,
-        },
+        message: sent ? 'OTP sent to your email for login verification.' : 'Login successful, but OTP email failed. Please check logs.',
+        emailSent: sent,
+        requireOtp: true,
+        email: user.email
     });
 };
 

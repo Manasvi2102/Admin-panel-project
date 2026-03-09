@@ -26,7 +26,7 @@ const sendEmail = async (options) => {
         console.log(`✅ Email sent successfully! MessageID: ${info.messageId}`);
         return info;
     } catch (error) {
-        console.error(`❌ Mailer Error for ${options.email}:`, error.message);
+        console.error(`❌ Mailer Error:`, error);
         throw error;
     }
 };

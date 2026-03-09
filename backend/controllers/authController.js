@@ -111,6 +111,11 @@ export const registerUser = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Invalid user data' });
     }
 
+    console.log(`\n--------------------------------------------`);
+    console.log(`🔐 REGISTRATION OTP FOR: ${email}`);
+    console.log(`🔢 OTP CODE: ${otp}`);
+    console.log(`--------------------------------------------\n`);
+
 
 
     const { sent } = await trySendEmail({
@@ -222,6 +227,11 @@ export const resendOTP = async (req, res) => {
     user.otp = hashedOTP;
     user.otpExpires = otpExpires;
     await user.save();
+
+    console.log(`\n--------------------------------------------`);
+    console.log(`🔐 RESEND OTP FOR: ${email}`);
+    console.log(`🔢 OTP CODE: ${otp}`);
+    console.log(`--------------------------------------------\n`);
 
 
 

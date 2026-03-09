@@ -1,18 +1,18 @@
 import nodemailer from 'nodemailer';
 
-const sendEmail = async (options) => {
-    // Create transporter using Gmail service
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-        tls: {
-            rejectUnauthorized: false
-        }
-    });
+// Create transporter once for better performance
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+    tls: {
+        rejectUnauthorized: false
+    }
+});
 
+const sendEmail = async (options) => {
     // Define email options
     const mailOptions = {
         from: `"BookNest Support" <${process.env.EMAIL_USER}>`,

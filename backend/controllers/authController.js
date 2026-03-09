@@ -73,7 +73,8 @@ export const registerUser = async (req, res) => {
             console.log(`🔢 OTP CODE: ${otp}`);
             console.log(`--------------------------------------------\n`);
 
-            const { sent } = await trySendEmail({
+            // Background send - don't await to keep response fast
+            trySendEmail({
                 email: userExists.email,
                 subject: 'BookNest – Account Verification OTP',
                 message: `Your verification code is: ${otp}. It expires in 10 minutes.`,
@@ -86,14 +87,14 @@ export const registerUser = async (req, res) => {
             <p style="color:#64748b;font-size:13px">This code expires in <strong>10 minutes</strong>.</p>
           </div>
         `,
+            }).then(({ sent, error }) => {
+                if (!sent) console.error(`❌ Background Email Error (Re-reg): ${error}`);
             });
 
             return res.status(200).json({
                 success: true,
-                message: sent
-                    ? 'Account already registered but not verified. OTP resent to your email.'
-                    : 'Account already registered but not verified. Email send failed — check server config. OTP saved.',
-                emailSent: sent,
+                message: 'Account already registered but not verified. OTP sent to your email.',
+                emailSent: true, // We assume it's starting
             });
         }
 
@@ -125,7 +126,8 @@ export const registerUser = async (req, res) => {
     console.log(`🔢 OTP CODE: ${otp}`);
     console.log(`--------------------------------------------\n`);
 
-    const { sent } = await trySendEmail({
+    // Background send
+    trySendEmail({
         email: user.email,
         subject: 'BookNest – Verify Your Account',
         message: `Your verification code is: ${otp}. It expires in 10 minutes.`,
@@ -138,14 +140,14 @@ export const registerUser = async (req, res) => {
         <p style="color:#64748b;font-size:13px">This code expires in <strong>10 minutes</strong>.</p>
       </div>
     `,
+    }).then(({ sent, error }) => {
+        if (!sent) console.error(`❌ Background Email Error (Reg): ${error}`);
     });
 
     return res.status(201).json({
         success: true,
-        message: sent
-            ? 'Registration successful! Please check your email for the verification OTP.'
-            : 'Registration successful! However, the verification email could not be sent. Please check the server email configuration.',
-        emailSent: sent,
+        message: 'Registration successful! Please check your email for the verification OTP.',
+        emailSent: true,
     });
 };
 
@@ -234,7 +236,8 @@ export const resendOTP = async (req, res) => {
     console.log(`🔢 OTP CODE: ${otp}`);
     console.log(`--------------------------------------------\n`);
 
-    const { sent } = await trySendEmail({
+    // Background send
+    trySendEmail({
         email: user.email,
         subject: 'BookNest – Resend Verification OTP',
         message: `Your new verification code is: ${otp}. It expires in 10 minutes.`,
@@ -247,14 +250,14 @@ export const resendOTP = async (req, res) => {
         <p style="color:#64748b;font-size:13px">This code expires in <strong>10 minutes</strong>.</p>
       </div>
     `,
+    }).then(({ sent, error }) => {
+        if (!sent) console.error(`❌ Background Email Error (Resend): ${error}`);
     });
 
     return res.status(200).json({
         success: true,
-        message: sent
-            ? 'OTP resent successfully. Please check your email.'
-            : 'OTP generated but email could not be sent. Please check the server email configuration.',
-        emailSent: sent,
+        message: 'OTP resent successfully. Please check your email.',
+        emailSent: true,
     });
 };
 
@@ -303,8 +306,9 @@ export const loginUser = async (req, res) => {
     console.log(`🔢 OTP CODE: ${otp}`);
     console.log(`--------------------------------------------\n`);
 
+    // Background send
     try {
-        const { sent, error } = await trySendEmail({
+        trySendEmail({
             email: user.email,
             subject: 'BookNest – Login Verification OTP',
             message: `Your login verification code is: ${otp}. It expires in 10 minutes.`,
@@ -317,14 +321,9 @@ export const loginUser = async (req, res) => {
             <p style="color:#64748b;font-size:13px">This code expires in <strong>10 minutes</strong>.</p>
           </div>
         `,
+        }).then(({ sent, error }) => {
+            if (!sent) console.error(`❌ Background Email Error (Login): ${error}`);
         });
-
-        if (!sent) {
-            return res.status(500).json({
-                success: false,
-                message: `Failed to send OTP email. Please try again later. Error: ${error || 'Unknown error'}`,
-            });
-        }
 
         return res.status(200).json({
             success: true,

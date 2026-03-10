@@ -1,21 +1,24 @@
 import nodemailer from 'nodemailer';
 
-// Create transporter once for better performance
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // Use STARTTLS
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-    tls: {
-        rejectUnauthorized: false
+let transporter;
+
+const getTransporter = () => {
+    if (!transporter) {
+        // Optimized for Gmail App Passwords
+        transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
     }
-});
+    return transporter;
+};
 
 const sendEmail = async (options) => {
-    // Define email options
+    const transporter = getTransporter();
+
     const mailOptions = {
         from: `"BookNest Support" <${process.env.EMAIL_USER}>`,
         to: options.email,
@@ -24,14 +27,14 @@ const sendEmail = async (options) => {
         html: options.html,
     };
 
-    console.log(`🚀 Sending email to: ${options.email} | Subject: ${options.subject}`);
+    console.log(`🚀 Attempting to send email to: ${options.email}`);
 
     try {
         const info = await transporter.sendMail(mailOptions);
-        console.log(`✅ Email sent successfully! MessageID: ${info.messageId}`);
+        console.log(`✅ Email sent! MessageID: ${info.messageId}`);
         return info;
     } catch (error) {
-        console.error(`❌ Mailer Error:`, error);
+        console.error(`❌ Mailer Error: ${error.message}`);
         throw error;
     }
 };
